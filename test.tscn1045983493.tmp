@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3 uid="uid://ccj3gry2idf28"]
+
+[ext_resource type="Script" uid="uid://5uxt5h26plsk" path="res://main.gd" id="1_37kl0"]
+
+[node name="Main" type="Node2D" unique_id=85261084]
+script = ExtResource("1_37kl0")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=818198374]
+position = Vector2(15, 3)
+zoom = Vector2(0.715, 0.715)
+
+[node name="Polygon2D" type="Polygon2D" parent="." unique_id=711543194]
+show_behind_parent = true
+polygon = PackedVector2Array(0, 0, 272, -168, 425, 167, 512, 0, 512, 512, 0, 512)

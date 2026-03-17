@@ -1,0 +1,47 @@
+[gd_scene load_steps=2 format=3 uid="uid://bl4iv6bi4qgtn"]
+
+[ext_resource type="Script" uid="uid://djr1yc11wn1w2" path="res://src/circle_packed_polygon_test_scene.gd" id="1_ju2i2"]
+
+[node name="CirclePackedPolygonTestScene" type="Node2D" unique_id=1716965571]
+script = ExtResource("1_ju2i2")
+
+[node name="Camera" type="Camera2D" parent="." unique_id=1786952832]
+zoom = Vector2(0.4, 0.4)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=505001987]
+
+[node name="Control" type="Control" parent="CanvasLayer" unique_id=2009819445]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/Control" unique_id=627075021]
+layout_mode = 1
+offset_left = 12.0
+offset_top = 11.0
+offset_right = 520.0
+offset_bottom = 56.0
+theme_override_font_sizes/font_size = 32
+text = "Polygon-Circle Packing Test (WIP)"
+
+[node name="NextStep" type="Label" parent="CanvasLayer/Control" unique_id=561224781]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -50.0
+offset_right = 827.0
+offset_bottom = -5.0
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "Next Step: Create circles to connect the existing ones"
+
+[node name="Timer" type="Timer" parent="." unique_id=340682420]
+
+[node name="Polygon" type="Line2D" parent="." unique_id=1956178808]
+points = PackedVector2Array(-873, 257, -867, 70, -1042, 15, -898, -118, -966, -403, -759, -572, -483, -562, -255, -465, -172, -327, -165, -189, -86, -40, -24, -13, 42, -30, 108, -171, 108, -289, 173, -461, 215, -479, 349, -420, 418, -292, 349, -127, 311, 39, 443, 160, 653, 32, 750, -192, 902, -292, 1064, -106, 1085, 49, 1019, 219, 853, 371, 532, 409, 249, 353, 42, 250, -255, 291, -258, 446, -379, 564, -555, 643, -780, 591, -894, 481, -894, 360)
+closed = true
