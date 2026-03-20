@@ -12,9 +12,7 @@ var polygon: = PackedVector2Array([]):
 var circle_grid: Dictionary[Vector2i, Array] = {}
 var edge_grid: Dictionary[Vector2i, Array]= {}
 var circles: Array[Circle] = []
-
 var clockwise: bool = false
-
 
 var origin = Vector2.ZERO:
 	get():
@@ -73,10 +71,8 @@ func get_a_circle(idx=randi_range(0, polygon.size()-1)):
 	var v2 = starting_point.direction_to(prev_point)
 	
 	var bisector = (v1 + v2).normalized()
-	var pointy = false
-	
-	if v1.cross(v2) < 0:
-		pointy = true
+	var pointy = v1.cross(v2) < 0
+	if pointy:
 		bisector *= -1
 	
 	var cos_theta = v1.dot(v2)
@@ -87,78 +83,109 @@ func get_a_circle(idx=randi_range(0, polygon.size()-1)):
 	var build_circle = func(radius: float):
 		var d = radius
 		if not pointy: d /= sin_half
-		var center = starting_point + bisector * d
-		var intersection = Geometry2D.get_closest_point_to_segment(center, starting_point, next_point)
-		var direction = v1
-		if pointy:
-			intersection = starting_point
-			direction = -center.direction_to(starting_point).orthogonal()
 		
-		return Circle.create(
-			starting_point + bisector * d,
-			radius - 0.1,
-			intersection,
-			-direction
-		)
+		var center = starting_point + bisector * d
+		var circle = Circle.create(center, radius - 0.1)
+		
+		circle.polygon_idx = idx
+		circle.hit = get_progress_on_line(circle.position, starting_point, prev_point)
+		# Collision checks
+		if circle.hit >= 1.0 \
+		or circle_intersects_polygon(circle, 1) \
+		or get_intersecting_circles(circle, 1):
+			return null
+		
+		return circle
 	
-	var min_radius = 0.0
+	var min_radius = 64.0
 	var max_radius = 512.0
-	while max_radius - min_radius > 0.01:
+	
+	var smallest = build_circle.call(min_radius)
+	if smallest == null:
+		return null
+	
+	while max_radius - min_radius > 0.1:
 		var mid = (max_radius + min_radius) * 0.5
 		var candidate = build_circle.call(mid)
-		
-		var progress_a = get_circle_progress_on_line(candidate, starting_point, next_point)
-		var progress_b = get_circle_progress_on_line(candidate, starting_point, prev_point)
-		if not pointy and (progress_a >= 1.0 or progress_b >= 1.0):
-			max_radius = mid
-		elif circle_intersects_polygon(candidate, 1):
-			max_radius = mid
-		elif get_intersecting_circles(candidate, 1):
+		if candidate == null:
 			max_radius = mid
 		else:
 			min_radius = mid
-	return build_circle.call(min_radius)
+	return build_circle.call(min_radius * 0.5)
 
-func get_circle_progress_on_line(circle: Circle, vector_a: Vector2, vector_b: Vector2) -> float:
-	var p = Geometry2D.get_closest_point_to_segment(circle.position, vector_a, vector_b)
+func get_progress_on_line(point: Vector2, vector_a: Vector2, vector_b: Vector2) -> float:
+	var p = Geometry2D.get_closest_point_to_segment(point, vector_a, vector_b)
 	var ab = vector_b - vector_a
 	return (p - vector_a).dot(ab) / ab.length_squared()
 
 func create_edge_circle(circle: Circle):
-	var tangent_point = circle.intersection
-	var normal = circle.position.direction_to(circle.intersection)
-	var direction = circle.direction
-	if normal.dot(circle.position - circle.intersection) < 0:
-			normal = -normal
+	var increment = 1 if circle.hit >= 0.95 else 0
 	
+	var idx = wrapi(circle.polygon_idx + increment, 0, polygon.size())
+	var next_idx = wrapi(circle.polygon_idx + 1 + increment, 0, polygon.size())
 	
-	var build_circle = func(radius:float):
-		var offset = 2.0 * sqrt(circle.radius * radius)
-		var center = tangent_point - direction * offset + normal * radius 
-		return Circle.create(center, radius - 0.01)
+	var p1 = polygon[idx]
+	var p2 = polygon[next_idx]
 	
-	var max_radius = 512.0
-	var min_radius = 1.0
+	var starting_position =  p1.lerp(p2, circle.hit)
+	var direction = p1.direction_to(p2)
 	
-	var smallest_circle = build_circle.call(min_radius)
-	if circle_intersects_polygon(smallest_circle, 1):
+	var min_radius = 64.0
+	var max_radius = 256.0
+	
+	var ignore=[circle]
+	
+	var build = func(radius):
+		var new_circle = find_tangent_circle(circle, radius, starting_position, direction)
+		if new_circle == null: return null
+		new_circle.hit = get_progress_on_line(new_circle.position, p1, p2)
+		
+		# Collision checks
+		if new_circle.hit >= 1.0 \
+		or circle_intersects_polygon(new_circle, 1) \
+		or get_intersecting_circles(new_circle, 1, ignore):
+			return null
+		
+		return new_circle
+		
+	var smallest_circle = build.call(min_radius)
+	if smallest_circle == null:
 		return null
 	
 	while max_radius - min_radius > 0.1:
 		var mid = (min_radius + max_radius) * 0.5
-		var candidate = build_circle.call(mid)
-		if circle_intersects_polygon(candidate, 1):
+		var candidate = build.call(mid)
+		
+		if not candidate:
 			max_radius = mid
-		elif get_intersecting_circles(candidate, 1):
-			max_radius = mid
-		else: 
+		else:
 			min_radius = mid
 	
-	var new_circle = build_circle.call(min_radius)
-	circle.connections.push_back(new_circle)
-	new_circle.connections.push_back(circle)
+	return find_tangent_circle(circle, min_radius, starting_position, direction)
+
+
+func find_tangent_circle(circle: Circle, radius:float, line_position, line_direction):
+	var d = line_direction.normalized()
+	var n = Vector2(-d.y, d.x) # perpendicular
 	
-	return new_circle
+	var P0 = line_position + n * radius
+	
+	var R = circle.radius + radius
+	var f = P0 - circle.position
+	
+	var a = 1.0
+	var b = 2.0 * d.dot(f)
+	var c = f.dot(f) - R * R
+	
+	var discriminant = b*b - 4*a*c
+	if discriminant < 0:
+		return null
+	var sqrt_d = sqrt(discriminant)
+	var center = P0 + d * ((-b + sqrt_d)/(2*a))
+	
+	var SHRINK = 0.01
+	return Circle.create(center, radius - SHRINK)
+
 
 
 # Add a circle into the CirclePackedPolygon.
@@ -168,10 +195,12 @@ func insert_circle(circle: Circle):
 	circles.push_back(circle)
 	return true
 
-func get_intersecting_circles(circle_a: Circle, count=-1):
+func get_intersecting_circles(circle_a: Circle, count=-1, exlude=[]):
 	var intersecting_circles: Dictionary[Circle, bool] = {}
 	for coordinate in circle_a.get_coordinates(cell_size, origin):
 		for circle_b in circle_grid.get(coordinate, []):
+			if circle_b in exlude:
+				continue
 			if circle_a.intersects_circle(circle_b):
 				intersecting_circles.set(circle_b, true)
 				if count != -1 and intersecting_circles.size() == count:

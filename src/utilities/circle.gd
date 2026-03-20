@@ -7,22 +7,20 @@ class_name Circle
 	set(value):
 		radius = value
 		queue_redraw()
-var intersection: = Vector2.ZERO
-var direction: = Vector2.ZERO
+
 var connections = []
+
+var polygon_idx: int = -1
+var hit: = -1.0
 
 # Factory function to create a circle
 static func create(
 	_position: Vector2 = Vector2.ZERO, 
 	_radius: float = 1.0,
-	_intersection: = Vector2.ZERO,
-	_direction: = Vector2.ZERO
 ):
 	var new_circle: = Circle.new()
 	new_circle.position = _position
 	new_circle.radius = _radius
-	new_circle.intersection = _intersection
-	new_circle.direction = _direction
 	return new_circle
 
 func _ready():

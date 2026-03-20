@@ -2,20 +2,23 @@ extends Node2D
 
 @onready var polygon = $Polygon.points
 @onready var circle_packed_polygon: CirclePackedPolygon = CirclePackedPolygon.new(polygon)
-
+var results = []
 func _ready():
 	print("Performing basic tests: ")
 	circle_polygon_intersection_test()
 	test_circle_circle_intersection_test()
 	for idx in polygon.size():
 		var circle = circle_packed_polygon.get_a_circle(idx)
-		circle_packed_polygon.insert_circle(circle)
+		if circle:
+			circle_packed_polygon.insert_circle(circle)
+			var new_circle = circle_packed_polygon.create_edge_circle(circle)
+			if new_circle:
+				circle_packed_polygon.insert_circle(new_circle)
 	queue_redraw()
 
 func _draw():
 	for circle in circle_packed_polygon.circles:
 		draw_circle(circle.position, circle.radius, Color.RED, false, 4.0)
-
 
 func circle_polygon_intersection_test():
 	# Base polygon
