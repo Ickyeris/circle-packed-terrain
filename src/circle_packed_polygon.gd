@@ -4,6 +4,7 @@ class_name CirclePackedPolygon
 # File: drawn_polygon.gd
 
 @export var cell_size = 256.0
+@export var minimum_radius = 32.0
 
 var polygon: = PackedVector2Array([]):
 	set(value):
@@ -38,21 +39,6 @@ func generate_grid():
 		for coordinate in edge.get_coordinates(cell_size, origin):
 			edge_grid.get_or_add(coordinate, []).push_back(edge)
 
-# A circle-polygon intersection method
-func circle_intersects_polygon(circle: Circle, threshold=1):
-	var intersections: int = 0
-	var visited: Dictionary[Edge, bool] = {}
-	for coordinate in circle.get_coordinates(cell_size, origin):
-		var edges: Array = edge_grid.get(coordinate, [])
-		for edge in edges:
-			if visited.has(edge):
-				continue
-			visited.set(edge, true)
-			if circle_intersects_edge(edge, circle) != -1:
-				intersections += 1
-				if intersections >= threshold:
-					return true
-	return false
 
 func circle_intersects_edge(edge: Edge, circle: Circle):
 	return Geometry2D.segment_intersects_circle(
@@ -97,7 +83,7 @@ func get_a_circle(idx=randi_range(0, polygon.size()-1)):
 		
 		return circle
 	
-	var min_radius = 64.0
+	var min_radius = minimum_radius
 	var max_radius = 512.0
 	
 	var smallest = build_circle.call(min_radius)
@@ -113,10 +99,6 @@ func get_a_circle(idx=randi_range(0, polygon.size()-1)):
 			min_radius = mid
 	return build_circle.call(min_radius * 0.5)
 
-func get_progress_on_line(point: Vector2, vector_a: Vector2, vector_b: Vector2) -> float:
-	var p = Geometry2D.get_closest_point_to_segment(point, vector_a, vector_b)
-	var ab = vector_b - vector_a
-	return (p - vector_a).dot(ab) / ab.length_squared()
 
 func create_edge_circle(circle: Circle):
 	var increment = 1 if circle.hit >= 0.95 else 0
@@ -130,7 +112,7 @@ func create_edge_circle(circle: Circle):
 	var starting_position =  p1.lerp(p2, circle.hit)
 	var direction = p1.direction_to(p2)
 	
-	var min_radius = 64.0
+	var min_radius = minimum_radius
 	var max_radius = 256.0
 	
 	var ignore=[circle]
@@ -163,6 +145,74 @@ func create_edge_circle(circle: Circle):
 	
 	return find_tangent_circle(circle, min_radius, starting_position, direction)
 
+func get_adjacent_circles(circle_a: Circle, circle_b: Circle):
+	var adjacent_circles = [circle_b]
+	var stack = []
+	while true:
+		var last_circle = adjacent_circles[-1]
+		var circle_c: Circle = get_circle_between_circles(last_circle, circle_a)
+		if circle_c == null:
+			break
+		stack.push_back([last_circle, circle_c])
+		adjacent_circles.push_back(circle_c)
+		self.insert_circle(circle_c)
+	
+	while not stack.is_empty():
+		var item = stack.pop_front()
+		var a = item[0]
+		var b = item[1]
+		
+		var circle_c: Circle = get_circle_between_circles(a, b)
+		if circle_c:
+			self.insert_circle(circle_c)
+			stack.push_back([circle_c, b])
+			stack.push_back([a, circle_c])
+	
+	return adjacent_circles
+
+func get_circle_between_circles(circle_a: Circle, circle_b: Circle):
+	var d_vec = circle_b.position - circle_a.position
+	var d = d_vec.length()
+	var dir = d_vec / d
+	var perp = dir.orthogonal()
+	
+	var build_circle = func(radius: float):
+		var radius_a = circle_a.radius + radius
+		var radius_b = circle_b.radius + radius
+		var a = (pow(radius_a, 2) - pow(radius_b, 2) + pow(d, 2)) / (2*d)
+		var base = circle_a.position + dir * a
+		var h = sqrt(pow(radius_a, 2) - pow(a, 2))
+		var center = base + (perp * h)
+		var circle = Circle.create(center, radius - 1.0)
+		if circle_intersects_polygon(circle, 1) \
+		or get_intersecting_circles(circle, 1, [circle_a, circle_b]):
+			return null
+		
+		if not Geometry2D.is_point_in_polygon(center, polygon):
+			return null
+		
+		return circle
+	
+	var min_radius: float = minimum_radius
+	var max_radius: float = 512.0
+	
+	var smallest = build_circle.call(min_radius)
+	if smallest == null:
+		return null
+	
+	while max_radius - min_radius > 0.1:
+		var mid = (min_radius + max_radius) * 0.5
+		var candidate = build_circle.call(mid)
+		if not candidate:
+			max_radius = mid
+		else:
+			min_radius = mid
+	return build_circle.call(min_radius)
+
+func get_progress_on_line(point: Vector2, vector_a: Vector2, vector_b: Vector2) -> float:
+	var p = Geometry2D.get_closest_point_to_segment(point, vector_a, vector_b)
+	var ab = vector_b - vector_a
+	return (p - vector_a).dot(ab) / ab.length_squared()
 
 func find_tangent_circle(circle: Circle, radius:float, line_position, line_direction):
 	var d = line_direction.normalized()
@@ -206,6 +256,22 @@ func get_intersecting_circles(circle_a: Circle, count=-1, exlude=[]):
 				if count != -1 and intersecting_circles.size() == count:
 					return intersecting_circles
 	return intersecting_circles
+
+# A circle-polygon intersection method
+func circle_intersects_polygon(circle: Circle, threshold=1):
+	var intersections: int = 0
+	var visited: Dictionary[Edge, bool] = {}
+	for coordinate in circle.get_coordinates(cell_size, origin):
+		var edges: Array = edge_grid.get(coordinate, [])
+		for edge in edges:
+			if visited.has(edge):
+				continue
+			visited.set(edge, true)
+			if circle_intersects_edge(edge, circle) != -1:
+				intersections += 1
+				if intersections >= threshold:
+					return true
+	return false
 
 func get_largest_circle(point: Vector2):
 	var max_radius = 128.0

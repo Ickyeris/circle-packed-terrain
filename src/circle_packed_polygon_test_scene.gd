@@ -4,9 +4,11 @@ extends Node2D
 @onready var circle_packed_polygon: CirclePackedPolygon = CirclePackedPolygon.new(polygon)
 var results = []
 func _ready():
-	print("Performing basic tests: ")
-	circle_polygon_intersection_test()
-	test_circle_circle_intersection_test()
+	update()
+
+func update():
+	circle_packed_polygon.circles.clear()
+	circle_packed_polygon.circle_grid.clear()
 	for idx in polygon.size():
 		var circle = circle_packed_polygon.get_a_circle(idx)
 		if circle:
@@ -14,6 +16,7 @@ func _ready():
 			var new_circle = circle_packed_polygon.create_edge_circle(circle)
 			if new_circle:
 				circle_packed_polygon.insert_circle(new_circle)
+				circle_packed_polygon.get_adjacent_circles(circle, new_circle)
 	queue_redraw()
 
 func _draw():
@@ -93,3 +96,9 @@ func test_circle_circle_intersection_test():
 	assert(circle_packed_polygon.get_intersecting_circles(circle).size() == 0)
 	
 	print("All circle-circle intersection tests passed!")
+
+
+func _on_min_radius_value_changed(value: float) -> void:
+	circle_packed_polygon.minimum_radius = $CanvasLayer/Control/min_radius.value
+	$CanvasLayer/Control/min_radius/Amount.text = str(circle_packed_polygon.minimum_radius)
+	update()

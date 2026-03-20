@@ -38,10 +38,39 @@ offset_right = 827.0
 offset_bottom = -5.0
 grow_vertical = 0
 theme_override_font_sizes/font_size = 32
-text = "Next Step: Create circles to connect the existing ones"
+text = "Next Step: Create a complete node graph from the circles"
+
+[node name="min_radius" type="HSlider" parent="CanvasLayer/Control" unique_id=602040058]
+layout_mode = 1
+offset_left = 13.0
+offset_top = 102.0
+offset_right = 416.0
+offset_bottom = 118.0
+min_value = 8.0
+max_value = 32.0
+value = 8.0
+
+[node name="Label" type="Label" parent="CanvasLayer/Control/min_radius" unique_id=1558530742]
+layout_mode = 0
+offset_left = 1.0
+offset_top = -26.0
+offset_right = 132.0
+offset_bottom = -3.0
+text = "Minimum Radius"
+
+[node name="Amount" type="Label" parent="CanvasLayer/Control/min_radius" unique_id=647384478]
+layout_mode = 0
+offset_left = 145.0
+offset_top = -25.0
+offset_right = 182.0
+offset_bottom = -2.0
+text = "1"
 
 [node name="Timer" type="Timer" parent="." unique_id=340682420]
 
 [node name="Polygon" type="Line2D" parent="." unique_id=1956178808]
-points = PackedVector2Array(-873, 257, -867, 70, -1042, 15, -898, -118, -966, -403, -759, -572, -483, -562, -255, -465, -172, -327, -165, -189, -86, -40, -24, -13, 42, -30, 108, -171, 108, -289, 173, -461, 215, -479, 349, -420, 418, -292, 349, -127, 311, 39, 443, 160, 653, 32, 750, -192, 902, -292, 1064, -106, 1085, 49, 1019, 219, 853, 371, 532, 409, 249, 353, 42, 250, -255, 291, -258, 446, -379, 564, -555, 643, -780, 591, -894, 481, -894, 360)
+points = PackedVector2Array(-980, 265, -725, 186, -433, 194, -232, 257, -124, 211, -74, 128, 56, 98, 198, 182, 323, 274, 469, 282, 507, 161, 511, 40, 490, -161, 561, -403, 833, -578, 992, -574, 1184, -457, 1163, -211, 925, -31, 866, 86, 979, 199, 1180, 224, 1271, 353, 1238, 520, 1117, 633, 971, 646, 820, 554, 607, 524, 490, 570, 373, 646, 235, 612, 102, 591, -224, 491, -529, 495, -867, 566, -1018, 466)
 closed = true
+
+[connection signal="changed" from="CanvasLayer/Control/min_radius" to="." method="_on_min_radius_changed"]
+[connection signal="value_changed" from="CanvasLayer/Control/min_radius" to="." method="_on_min_radius_value_changed"]
